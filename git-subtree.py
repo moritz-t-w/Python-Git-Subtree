@@ -654,8 +654,8 @@ class GitSubtree:
 			remote_ref
 		)
 
-	def __run(self, command, options: dict, *args):
-		"""Execute the `git-subtree` command."""
+	def to_args(self, command: str, options: dict, *args):
+		"""Convert the command, options and args to a list of strings to be passed to `subprocess.run`."""
 		options.update({
 			"q": self.quiet,
 			"d": self.debug,
@@ -669,11 +669,14 @@ class GitSubtree:
 				else:
 					args += (f"-{key}",)
 				if value is not True:  # meaning it's not a flag
+					args += (f"{' ' if short else '='}{value}",)  # example: -m <message>, --message=<message>
+		return (self.command, command) + args
 
+	def __run(self, command, options: dict, *args):
+		"""Execute the `git-subtree` command."""
 		subprocess.run(
-			[self.command, command, *args],
+			self.to_args(command, options, *args),
 			cwd=self.repository_path,
 			stdout=subprocess.PIPE,
 			stderr=subprocess.PIPE
 		)
-					args += (f"{' ' if short else '='}{value}",)  # example: -m <message>, --message=<message>
