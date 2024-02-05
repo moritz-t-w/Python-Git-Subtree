@@ -546,8 +546,8 @@ class GitSubtree:
 		ignore_joins: bool = False,
 		onto: str = None,
 		rejoin: bool = False,
-		message: str = None,
-		squash: bool = False
+		squash: bool = False,
+		message: str = None
 	):
 		"""
 		Does a split using the `prefix` subtree of `local_commit` and then
