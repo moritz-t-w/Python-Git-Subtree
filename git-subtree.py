@@ -108,7 +108,14 @@ class GitSubtree:
 		:param message:
 			Specify `message` as the commit message for the merge commit.
 		"""
-		pass
+		self.__run(
+			"add",
+			{
+				"squash": squash,
+				"m": message
+			},
+			local_commit
+		)
 
 	def add(self, repository: str, remote_ref: str, squash: bool = False, message: str = None):
 		"""
@@ -143,7 +150,15 @@ class GitSubtree:
 		:param message:
 			Specify `message` as the commit message for the merge commit.
 		"""
-		pass
+		self.__run(
+			"add",
+			{
+				"squash": squash,
+				"m": message
+			},
+			repository,
+			remote_ref
+		)
 
 	def merge(self, local_commit: str, repository: str = None, squash: bool = False, message: str = None):
 		"""
@@ -187,7 +202,15 @@ class GitSubtree:
 		:param message:
 			Specify `message` as the commit message for the merge commit.
 		"""
-		pass
+		self.__run(
+			"merge",
+			{
+				"squash": squash,
+				"m": message
+			},
+			local_commit,
+			repository
+		)
 
 	def split(
 		self,
@@ -255,7 +278,17 @@ class GitSubtree:
 			build its history from there.
 			If you used git subtree add, you should never need this option.
 		"""
-		pass
+		self.__run(
+			"split",
+			{
+				"annotate": annotate,
+				"b": branch,
+				"ignore-joins": ignore_joins,
+				"onto": onto
+			},
+			local_commit,
+			repository
+		)
 
 	def split(
 		self,
@@ -376,6 +409,20 @@ class GitSubtree:
 		:param message:
 			Specify `message` as the commit message for the merge commit.
 		"""
+		self.__run(
+			"split",
+			{
+				"annotate": annotate,
+				"b": branch,
+				"ignore-joins": ignore_joins,
+				"onto": onto,
+				"rejoin": rejoin,
+				"squash": squash,
+				"m": message
+			},
+			local_commit,
+			repository
+		)
 
 	def pull(self, repository: str, remote_ref: str, message: str = None, squash: bool = False):
 		"""
@@ -417,7 +464,15 @@ class GitSubtree:
 		:param message:
 			Specify `message` as the commit message for the merge commit.
 		"""
-		pass
+		self.__run(
+			"pull",
+			{
+				"m": message,
+				"squash": squash
+			},
+			repository,
+			remote_ref
+		)
 
 	def push(
 		self,
@@ -468,7 +523,18 @@ class GitSubtree:
 			build its history from there.
 			If you used git subtree add, you should never need this option.
 		"""
-		pass
+		self.__run(
+			"push",
+			{
+				"annotate": annotate,
+				"b": branch,
+				"ignore-joins": ignore_joins,
+				"onto": onto
+			},
+			repository,
+			local_commit,
+			remote_ref
+		)
 
 	def push(
 		self,
@@ -572,4 +638,42 @@ class GitSubtree:
 			:param message:
 				Specify `message` as the commit message for the merge commit.
 		"""
-		pass
+		self.__run(
+			"push",
+			{
+				"annotate": annotate,
+				"b": branch,
+				"ignore-joins": ignore_joins,
+				"onto": onto,
+				"rejoin": rejoin,
+				"squash": squash,
+				"m": message
+			},
+			repository,
+			local_commit,
+			remote_ref
+		)
+
+	def __run(self, command, options: dict, *args):
+		"""Execute the `git-subtree` command."""
+		options.update({
+			"q": self.quiet,
+			"d": self.debug,
+			"P": self.prefix
+		})
+		for key, value in options.items():
+			if value:
+				short = len(key) > 1
+				if short:
+					args += f"--{key}"
+				else:
+					args += f"-{key}"
+				if value is not True:  # meaning it's not a flag
+					args += f"{' ' if short else '='}{value}"  # example: -m <message>, --message=<message>
+
+		subprocess.run(
+			[self.command, command, *args],
+			cwd=self.repository_path,
+			stdout=subprocess.PIPE,
+			stderr=subprocess.PIPE
+		)
