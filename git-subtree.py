@@ -665,11 +665,10 @@ class GitSubtree:
 			if value:
 				short = len(key) > 1
 				if short:
-					args += f"--{key}"
+					args += (f"--{key}",)
 				else:
-					args += f"-{key}"
+					args += (f"-{key}",)
 				if value is not True:  # meaning it's not a flag
-					args += f"{' ' if short else '='}{value}"  # example: -m <message>, --message=<message>
 
 		subprocess.run(
 			[self.command, command, *args],
@@ -677,3 +676,4 @@ class GitSubtree:
 			stdout=subprocess.PIPE,
 			stderr=subprocess.PIPE
 		)
+					args += (f"{' ' if short else '='}{value}",)  # example: -m <message>, --message=<message>
