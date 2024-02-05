@@ -299,8 +299,8 @@ class GitSubtree:
 		ignore_joins: bool = False,
 		onto: str = None,
 		rejoin: bool = False,
-		message: str = None,
-		squash: bool = False
+		squash: bool = False,
+		message: str = None
 	):
 		"""
 		Extract a new, synthetic project history from the history of the
@@ -424,7 +424,7 @@ class GitSubtree:
 			repository
 		)
 
-	def pull(self, repository: str, remote_ref: str, message: str = None, squash: bool = False):
+	def pull(self, repository: str, remote_ref: str, squash: bool = False, message: str = None):
 		"""
 		Exactly like merge, but parallels git pull in that it fetches the
 		given ref from the specified remote repository.
