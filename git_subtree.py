@@ -904,3 +904,21 @@ if __name__ == "__main__":
 
 	args = parser.parse_args()
 	# endregion Parse command line arguments
+
+	def fail():
+		parser.print_help()
+		exit(1)
+
+	self = GitSubtree(repository_path=".", prefix=args.prefix, quiet=args.quiet, debug=args.debug)
+	if args.command is None:
+		fail()
+	function = getattr(GitSubtree, args.command)
+	if function is None or not callable(function):
+		fail()
+
+	function_args_dict = {}
+	for key, value in vars(args).items():
+		if value is not None and key not in ["command", "quiet", "debug", "prefix"]:
+			function_args_dict[key.replace("-", "_").lower()] = value
+
+	function(self, **function_args_dict)
