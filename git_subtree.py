@@ -680,3 +680,227 @@ class GitSubtree:
 			stdout=subprocess.PIPE,
 			stderr=subprocess.PIPE
 		)
+
+
+if __name__ == "__main__":
+	# region Parse command line arguments
+	import argparse
+	parser = argparse.ArgumentParser(description="Process git subtree commands.")
+
+	subparsers = parser.add_subparsers(dest="command", help="Subtree command to execute.")
+
+	# region Commands and their arguments (not options)
+	# region Add
+	add = subparsers.add_parser(
+		"add",
+		help="Create the <prefix> subtree by importing its contents from the given <local-commit> or <repository> and "
+		"<remote-ref>. A new commit is created automatically, joining the imported project’s history with your own. "
+		"With --squash, import only a single commit from the subproject, rather than its entire history."
+	)
+	mutually_exclusive_add_args = add.add_mutually_exclusive_group(required=True)
+	mutually_exclusive_add_args.add_argument("local-commit", type=str, nargs="?")
+	group = mutually_exclusive_add_args.add_argument_group() # TODO: Nesting argument groups is deprecated.
+	group.add_argument("repository", type=str)
+	group.add_argument("remote-ref", type=str)
+	# endregion Add
+
+	# region Merge
+	merge = subparsers.add_parser(
+		"merge",
+		help="Merge recent changes up to <local-commit> into the <prefix>"
+		"subtree. As with normal git merge, this doesn’t remove your own"
+		"local changes; it just merges those changes into the latest"
+		"<local-commit>. With --squash, create only one commit that contains"
+		"all the changes, rather than merging in the entire history."
+		"\n"
+		"If you use --squash, the merge direction doesn’t always have to be"
+		"forward; you can use this command to go back in time from v2.5 to"
+		"v2.4, for example. If your merge introduces a conflict, you can"
+		"resolve it in the usual ways."
+		"\n"
+		"When using --squash, and the previous merge with --squash merged an"
+		"annotated tag of the subtree repository, that tag needs to be"
+		"available locally. If <repository> is given, a missing tag will"
+		"automatically be fetched from that repository."
+	)
+	merge.add_argument("local-commit", type=str)
+	merge.add_argument("repository", type=str, nargs="?")
+	# endregion Merge
+
+	# region Split
+	split = subparsers.add_parser(
+		"split",
+		help="Extract a new, synthetic project history from the history of the"
+		"<prefix> subtree of <local-commit>, or of HEAD if no <local-commit>"
+		"is given. The new history includes only the commits (including"
+		"merges) that affected <prefix>, and each of those commits now has"
+		"the contents of <prefix> at the root of the project instead of in a"
+		"subdirectory. Thus, the newly created history is suitable for"
+		"export as a separate git repository."
+		"\n"
+		"After splitting successfully, a single commit ID is printed to"
+		"stdout. This corresponds to the HEAD of the newly created tree,"
+		"which you can manipulate however you want."
+		"\n"
+		"Repeated splits of exactly the same history are guaranteed to be"
+		"identical (i.e. to produce the same commit IDs) as long as the"
+		"settings passed to split (such as --annotate) are the same. Because"
+		"of this, if you add new commits and then re-split, the new commits"
+		"will be attached as commits on top of the history you generated"
+		"last time, so git merge and friends will work as expected."
+		"\n"
+		"When a previous merge with --squash merged an annotated tag of the"
+		"subtree repository, that tag needs to be available locally. If"
+		"<repository> is given, a missing tag will automatically be fetched"
+		"from that repository."
+	)
+	split.add_argument("local-commit", type=str, nargs="?")
+	split.add_argument("repository", type=str, nargs="?")
+	# endregion Split
+
+	# region Pull
+	pull = subparsers.add_parser(
+		"pull",
+		help="Exactly like merge, but parallels git pull in that it fetches the"
+		"given ref from the specified remote repository."
+	)
+	pull.add_argument("repository", type=str)
+	pull.add_argument("remote-ref", type=str)
+	# endregion Pull
+
+	# region Push
+	push = subparsers.add_parser(
+		"push",
+		help="Does a split using the <prefix> subtree of <local-commit> and then"
+		"does a git push to push the result to the <repository> and"
+		"<remote-ref>. This can be used to push your subtree to different"
+		"branches of the remote repository. Just as with split, if no"
+		"<local-commit> is given, then HEAD is used. The optional leading +"
+		"is ignored."
+	)
+	push.add_argument("repository", type=str)
+	push.add_argument("[+][<local-commit>]<remote-ref>", type=str)
+	# endregion Push
+
+	# endregion Commands and their arguments (not options)
+
+	# region Options
+	# region For all commands
+	parser.add_argument(
+		"-q", "--quiet", action="store_true",
+		help="Suppress unnecessary output messages on stderr."
+	)
+	parser.add_argument(
+		"-d", "--debug", action="store_true",
+		help="Produce even more unnecessary output messages on stderr."
+	)
+	parser.add_argument(
+		"-P", "--prefix", type=str,
+		help="Specify the path in the repository to the subtree you want to manipulate. This option is mandatory for all"
+		"commands."
+	)
+	# endregion For all commands
+
+	# region Add, merge, split --rejoing, push --rejoin
+	commands = [add, merge]
+	for command in [split, push]:
+		# TODO: Only add these to the array if --rejoin somehow
+		commands.append(command)
+
+	for command in commands:
+		command.add_argument(
+			"-s", "--squash", action="store_true",
+			help="Instead of merging the entire history from the subtree project,"
+			"produce only a single commit that contains all the differences you"
+			"want to merge, and then merge that new commit into your project."
+			"\n"
+			"Using this option helps to reduce log clutter. People rarely want"
+			"to see every change that happened between v1.0 and v1.1 of the"
+			"library they’re using, since none of the interim versions were ever"
+			"included in their application."
+			"\n"
+			"Using --squash also helps avoid problems when the same subproject"
+			"is included multiple times in the same project, or is removed and"
+			"then re-added. In such a case, it doesn’t make sense to combine the"
+			"histories anyway, since it’s unclear which part of the history"
+			"belongs to which subtree."
+			"\n"
+			"Furthermore, with --squash, you can switch back and forth between"
+			"different versions of a subtree, rather than strictly forward.  git"
+			"subtree merge --squash always adjusts the subtree to match the"
+			"exactly specified commit, even if getting to that commit would"
+			"require undoing some changes that were added earlier."
+			"\n"
+			"Whether or not you use --squash, changes made in your local"
+			"repository remain intact and can be later split and send upstream"
+			"to the subproject."
+		)
+		command.add_argument(
+			"-m", "--message", type=str,
+			help="Specify <message> as the commit message for the merge commit."
+		)
+	# endregion Add, merge, split --rejoing, push --rejoin
+
+	for command in [split, push]:
+		command.add_argument(
+			"--annotate", type=str,
+			help="When generating synthetic history, add <annotation> as a prefix to"
+			"each commit message. Since we’re creating new commits with the same"
+			"commit message, but possibly different content, from the original"
+			"commits, this can help to differentiate them and avoid confusion."
+			"\n"
+			"Whenever you split, you need to use the same <annotation>, or else"
+			"you don’t have a guarantee that the new re-created history will be"
+			"identical to the old one. That will prevent merging from working"
+			"correctly. git subtree tries to make it work anyway, particularly"
+			"if you use --rejoin, but it may not always be effective."
+		)
+		command.add_argument(
+			"-b", "--branch", type=str,
+			help="After generating the synthetic history, create a new branch called"
+			"<branch> that contains the new history. This is suitable for"
+			"immediate pushing upstream. <branch> must not already exist."
+		)
+		command.add_argument(
+			"--ignore-joins", action="store_true",
+			help="If you use --rejoin, git subtree attempts to optimize its history"
+			"reconstruction to generate only the new commits since the last"
+			"--rejoin.  --ignore-joins disables this behavior, forcing it to"
+			"regenerate the entire history. In a large project, this can take a"
+			"long time."
+		)
+		command.add_argument(
+			"--onto", type=str,
+			help="If your subtree was originally imported using something other than"
+			"git subtree, its history may not match what git subtree is"
+			"expecting. In that case, you can specify the commit ID <onto> that"
+			"corresponds to the first revision of the subproject’s history that"
+			"was imported into your project, and git subtree will attempt to"
+			"build its history from there."
+			"\n"
+			"If you used git subtree add, you should never need this option."
+		)
+		command.add_argument(
+			"--rejoin", action="store_true",
+			help=" After splitting, merge the newly created synthetic history back"
+			"into your main project. That way, future splits can search only the"
+			"part of history that has been added since the most recent --rejoin."
+			"\n"
+			"If your split commits end up merged into the upstream subproject,"
+			"and then you want to get the latest upstream version, this will"
+			"allow git’s merge algorithm to more intelligently avoid conflicts"
+			"(since it knows these synthetic commits are already part of the"
+			"upstream repository)."
+			"\n"
+			"Unfortunately, using this option results in git log showing an"
+			"extra copy of every new commit that was created (the original, and"
+			"the synthetic one)."
+			"\n"
+			"If you do all your merges with --squash, make sure you also use"
+			"--squash when you split --rejoin."
+		)
+
+	# endregion Options
+
+	args = parser.parse_args()
+	# endregion Parse command line arguments
