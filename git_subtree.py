@@ -698,13 +698,9 @@ if __name__ == "__main__":
 		"<remote-ref>. A new commit is created automatically, joining the imported project’s history with your own. "
 		"With --squash, import only a single commit from the subproject, rather than its entire history."
 	)
-	mutually_exclusive_add_args = add.add_mutually_exclusive_group(required=True)
-	mutually_exclusive_add_args.add_argument("local-commit", type=str, nargs="?")
-	with warnings.catch_warnings():
-		warnings.filterwarnings("ignore", category=DeprecationWarning)
-		group = mutually_exclusive_add_args.add_argument_group() # TODO: Nesting argument groups is deprecated.
-	group.add_argument("repository", type=str)
-	group.add_argument("remote-ref", type=str)
+	# hack to allow for mutually exclusive argument GROUPs, or in other words, overloading the add command.
+	add.add_argument("local-commit-or-repository", type=str)
+	add.add_argument("remote-ref", type=str, nargs="?")
 	# endregion Add
 
 	# region Merge
@@ -923,5 +919,11 @@ if __name__ == "__main__":
 	for key, value in vars(args).items():
 		if value is not None and key not in ["command", "quiet", "debug", "prefix"]:
 			function_args_dict[key.replace("-", "_").lower()] = value
+
+	if args.command == "add":
+		# decide which overload of the add command to use
+		function_args_dict[
+			"repository" if "remote_ref" in function_args_dict else "local_commit"
+		] = function_args_dict.pop("local_commit_or_repository")
 
 	function(self, **function_args_dict)
