@@ -664,12 +664,12 @@ class GitSubtree:
 		for key, value in options.items():
 			if value:
 				short = len(key) > 1
+				argument = f"-{key}"
 				if short:
-					args += (f"--{key}",)
-				else:
-					args += (f"-{key}",)
+					argument = f"-{argument}"
 				if value is not True:  # meaning it's not a flag
-					args += (f"{' ' if short else '='}{value}",)  # example: -m <message>, --message=<message>
+					argument += f"{' ' if short else '='}{value}"  # example: -m <message>, --message=<message>
+				args += (argument,)
 		return (self.command, command) + tuple(filter(lambda argument: argument is not None, args))
 
 	def __run(self, command, options: dict, *args):
