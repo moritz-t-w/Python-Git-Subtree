@@ -669,7 +669,7 @@ class GitSubtree:
 				if short:
 					argument = f"-{argument}"
 				if value is not True:  # meaning it's not a flag
-					argument += f"{' ' if short else '='}{value}"  # example: -m <message>, --message=<message>
+					argument += f"{'=' if short else ' '}{value}"  # example: -m <message>, --message=<message>
 				args += (argument,)
 		return (self.command, command) + tuple(filter(lambda argument: argument is not None, args))
 
