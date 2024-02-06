@@ -670,7 +670,7 @@ class GitSubtree:
 					args += (f"-{key}",)
 				if value is not True:  # meaning it's not a flag
 					args += (f"{' ' if short else '='}{value}",)  # example: -m <message>, --message=<message>
-		return (self.command, command) + args
+		return (self.command, command) + tuple(filter(lambda argument: argument is not None, args))
 
 	def __run(self, command, options: dict, *args):
 		"""Execute the `git-subtree` command."""
