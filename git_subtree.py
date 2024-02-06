@@ -1,4 +1,5 @@
 import subprocess
+import warnings
 
 
 class GitSubtree:
@@ -699,7 +700,9 @@ if __name__ == "__main__":
 	)
 	mutually_exclusive_add_args = add.add_mutually_exclusive_group(required=True)
 	mutually_exclusive_add_args.add_argument("local-commit", type=str, nargs="?")
-	group = mutually_exclusive_add_args.add_argument_group() # TODO: Nesting argument groups is deprecated.
+	with warnings.catch_warnings():
+		warnings.filterwarnings("ignore", category=DeprecationWarning)
+		group = mutually_exclusive_add_args.add_argument_group() # TODO: Nesting argument groups is deprecated.
 	group.add_argument("repository", type=str)
 	group.add_argument("remote-ref", type=str)
 	# endregion Add
